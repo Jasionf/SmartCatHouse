@@ -1,0 +1,180 @@
+esphome:
+  name: ha-epaper-demo
+  friendly_name: HA_Epaper_Demo
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "mbRW9zhpRNLYgmU9LCwlYpFNS/qLZn5qZ5509cyFyMo="
+
+ota:
+  - platform: esphome
+    password: "9cd848928536386de4a2862289ac6e55"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Ha-Epaper-Demo Fallback Hotspot"
+    password: "szWIP3xrygXN"
+
+
+captive_portal:
+
+sensor:
+  - platform: homeassistant
+    entity_id: sensor.cat_house_humidity
+    id: Humidity
+  - platform: homeassistant
+    entity_id: sensor.cat_house_co2
+    id: co2
+  - platform: homeassistant
+    entity_id: sensor.cat_house_nh3_2
+    id: nh3
+  - platform: homeassistant
+    entity_id: sensor.cat_house_temperature
+    id: tempetaure
+  - platform: homeassistant
+    entity_id: sensor.cat_house_tvoc
+    id: tvoc
+
+font:
+  - file: 'fonts/materialdesignicons-webfont.ttf'  #here is the directory to save ttf file
+    id: font_mdi_1
+    size: 58        # big size icon
+    glyphs: &mdi-weather-glyphs
+      - "\U000F0AE2" # 1-start
+      - "\U000F02D1" # 2-love
+      - "\U000F07E4" # 3-co2
+      - "\U000F1905" # 4-tvoc
+      - "\U000F050F" # 5-temp
+      - "\U000F058E" # 6-humid
+      - "\U000F0E65" # 7-cc
+      - "\U000F0F92" # 8-nh3
+      - "\U000F011B" # 9cat
+
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: font_mdi_medium   # small size icon
+    size: 35
+    glyphs: *mdi-weather-glyphs
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: font_mdi_large   # small size icon
+    size: 160
+    glyphs: *mdi-weather-glyphs
+  - file: 'fonts/materialdesignicons-webfont.ttf'
+    id: font_mdi_2   # small size icon
+    size: 35
+    glyphs: *mdi-weather-glyphs
+  - file: "gfonts://Inter@700"
+    id: font1
+    size: 16
+  - file: "gfonts://Inter@700"
+    id: font2
+    size: 28
+  - file: "fonts/Montserrat-Black.ttf"
+    id: data_font
+    size: 60
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+
+image:
+  - file: /config/esphome/image/top.png   
+    id: myImage1
+    type: BINARY
+    resize: 800x480   
+    invert_alpha: true   
+    
+  - file: /config/esphome/image/undline.png   
+    id: myImage2
+    type: BINARY
+    resize: 800x480    
+    invert_alpha: true   
+
+  - file: /config/esphome/image/tvoc.png   
+    id: myImage3
+    type: BINARY
+    resize: 800x480    
+    invert_alpha: False 
+
+  - file: /config/esphome/image/nh3.png   
+    id: myImage4
+    type: BINARY
+    resize: 800x480    
+    invert_alpha: False
+
+
+spi:
+  clk_pin: GPIO8
+  mosi_pin: GPIO10
+
+display:
+  - platform: waveshare_epaper
+    cs_pin: GPIO3
+    dc_pin: GPIO5
+    busy_pin: GPIO4
+    reset_pin: GPIO2
+    model: 7.50inv2
+    update_interval: 30s
+    lambda: |-
+
+      it.image(0, 0, id(myImage1));
+
+      it.image(0, 440, id(myImage2));
+
+
+      it.filled_rectangle(210, 160, 5, 258);
+
+
+
+      it.printf(80, 220, id(font_mdi_large), TextAlign::CENTER, "\U000F07E4");
+
+      it.printf(255, 200, id(font_mdi_medium), TextAlign::CENTER, "\U000F050F");
+      it.printf(255, 260, id(font_mdi_medium), TextAlign::CENTER, "\U000F058E");
+
+      it.printf(20, 300, id(font2), "%.1f", id(co2).state);
+      it.print(110, 300, id(font2), "ppm");
+      it.printf(300, 190, id(font1), "%.1f", id(tempetaure).state);
+      it.print(360, 190, id(font1), "°C");
+      
+      it.printf(300, 250, id(font1), "%.1f", id(Humidity).state);
+      it.print(360, 250, id(font1), "%");
+      it.printf(300, 315, id(font1), "%.1f", id(tvoc).state);
+      it.print(360, 315, id(font1), "ppb");
+      it.printf(300, 375, id(font1), "%.1f", id(nh3).state);
+      it.print(360, 375, id(font1), "ppm");
+
+      it.image(240, 310, id(myImage3));
+
+      it.image(240, 370, id(myImage4));
+
+      it.printf(22, 443, id(font_mdi_medium), TextAlign::CENTER, "\U000F0E65");
+      it.printf(632, 436, id(font_mdi_medium), TextAlign::CENTER, "\U000F02D1");
+
+      auto time_now = id(homeassistant_time).now();
+      // Month conversion
+      const char* months[] = {
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      };
+      const char* month_str = months[time_now.month - 1];  // Month index starts from 0
+      // Get the day
+      int day = time_now.day_of_month;
+      // Draw the date
+      it.printf(490, 260, id(data_font), "%s %d", month_str, day);
+      // Get the day of the week
+      const char* days[] = {"Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"};
+      const char* day_of_week = days[time_now.day_of_week];
+      it.printf(490, 190, id(data_font), "%s", day_of_week);
